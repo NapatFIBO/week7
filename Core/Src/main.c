@@ -55,9 +55,9 @@ float p_error=0;
 float s_error=0;
 float setpoint = 30;
 uint16_t PWMOut =10000;
-float K_P = 0;
-float K_I = 0;
-float K_D = 0;
+float K_P = 160;
+float K_I = 0.1;
+float K_D = 10;
 uint64_t Timestamp_Encoder = 0;
 /* USER CODE END PV */
 
@@ -115,8 +115,8 @@ int main(void)
 	HAL_TIM_Base_Start_IT(&htim2);
 	HAL_TIM_Encoder_Start(&htim1, TIM_CHANNEL_ALL);
 	HAL_TIM_Base_Start(&htim3);
-	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
-	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2);
+	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);//pa6
+	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2);//pa7
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -135,17 +135,34 @@ int main(void)
 			if(PWMOut<-10000){
 				PWMOut=-10000;
 			}
-			if(PWMOut <=10000 &PWMOut>=-10000){
-			Timestamp_Encoder = micros();
-			EncoderVel = (EncoderVel * 999 + EncoderVelocity_Update()) / 1000.0;
-			if(setpoint>=0){
-			rpm = EncoderVel*60.0/3072.0;
-			error = setpoint - rpm;
-			s_error += error;
-			PWMOut = (K_P*error)+(K_I*s_error)+(K_D*(error-p_error));
-			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, PWMOut);
-			__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, 0);
-			p_error = error;}
+			if(PWMOut <=10000 & PWMOut>=-10000)
+			{
+				Timestamp_Encoder = micros();
+				EncoderVel = (EncoderVel * 249 + EncoderVelocity_Update()) / 250.0;
+				if(setpoint>=0)
+				{
+					rpm = EncoderVel*60.0/3072.0;
+					error = setpoint - rpm;
+					s_error += error;
+					PWMOut = (K_P*error)+(K_I*s_error)+(K_D*(error-p_error));
+					__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, PWMOut);
+					__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, 0);
+					p_error = error;
+				}
+				if(setpoint<0)
+				{
+					rpm = EncoderVel*60.0/3072.0;
+					error = fabs(setpoint)-fabs(rpm);
+					s_error += error;
+					PWMOut = (K_P*error)+(K_I*s_error)+(K_D*(error-p_error));
+					__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);
+					__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, PWMOut);
+					p_error = error;
+
+				}
+			}
+
+
 
 		}
 
@@ -162,7 +179,7 @@ int main(void)
 
 	}
   /* USER CODE END 3 */
-}
+
 
 /**
   * @brief System Clock Configuration
@@ -279,7 +296,7 @@ static void MX_TIM2_Init(void)
   htim2.Instance = TIM2;
   htim2.Init.Prescaler = 99;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 4294967295;
+  htim2.Init.Period = 10000;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
